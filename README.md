@@ -25,5 +25,3 @@
 ## 🚀 نصب و راه‌اندازی
 
 ۱. **دریافت کدها:**
-   ```bash
-   git clone https://github.com/hldvd/GlassGarden.git
