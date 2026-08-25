@@ -5,12 +5,12 @@
 
 //======================================================
 // GlassGarden Configuration
-// نسخه : 1.0.0
+// نسخه : 1.1.0
 //======================================================
 
 //-------------- Project -----------------
 #define PROJECT_NAME "GlassGarden"
-#define PROJECT_VERSION "1.0.0"
+#define PROJECT_VERSION "1.1.0"
 
 //-------------- Serial ------------------
 constexpr uint32_t SERIAL_BAUDRATE = 115200;
@@ -25,55 +25,60 @@ constexpr char WIFI_PASSWORD[] = "sma28152";
 #define BLYNK_AUTH_TOKEN "eCG1Cwp3-E-DE_tUG3WYD-UlF5bseUZp"
 
 //-------------- GPIO --------------------
-constexpr uint8_t LIGHT_PIN = 4;
-constexpr uint8_t FOGGER_PIN = 32;
-constexpr uint8_t FAN_PIN = 22;
-constexpr uint8_t PUMP_PIN = 18;
+// رله‌ها (Active LOW)
+constexpr uint8_t PUMP_PIN      = 23;  // 💧 رله ۱
+constexpr uint8_t LIGHT_PIN     = 27;  // 💡 رله ۲
+constexpr uint8_t FOGGER_PIN    = 32;  // 💨 رله ۳
+constexpr uint8_t FAN_PIN       = 33;  // 🌀 رله ۴
 
-//-------------- Sensor ------------------
-constexpr uint8_t DHT_PIN = 17;  // ← تغییر: از 27 به 17
+//-------------- Sensors -----------------
+constexpr uint8_t DHT_PIN       = 17;  // 🌡️ AM2302
+constexpr uint8_t WATER_PIN     = 4;   // 📏 سنسور سطح آب P100
 
 // نوع سنسور : 11 = DHT11 | 22 = DHT22/AM2302 | 21 = DHT21
-constexpr uint8_t DHT_TYPE = 22;
+constexpr uint8_t DHT_TYPE      = 22;
 
 //-------------- Relay Logic -------------
-constexpr bool OUTPUT_ACTIVE_HIGH = true;
+// رله Active LOW: LOW = روشن، HIGH = خاموش
+constexpr bool OUTPUT_ACTIVE_HIGH = false;
+
+//-------------- Water Level -------------
+constexpr uint16_t WATER_LEVEL_EMPTY = 500;
+constexpr uint16_t WATER_LEVEL_FULL  = 3500;
 
 //-------------- Automation --------------
 constexpr bool AUTOMATION_ENABLED = true;
 
 // فن بر اساس دما (سانتی‌گراد)
-constexpr float FAN_TEMP_ON = 28.0f;
+constexpr float FAN_TEMP_ON  = 28.0f;
 constexpr float FAN_TEMP_OFF = 26.0f;
 
-// فن بر اساس رطوبت (درصد) - رطوبت بالا هم فن را روشن می‌کند
-constexpr float FAN_HUMIDITY_ON = 75.0f;
+// فن بر اساس رطوبت (درصد)
+constexpr float FAN_HUMIDITY_ON  = 75.0f;
 constexpr float FAN_HUMIDITY_OFF = 70.0f;
 
 // مه‌ساز بر اساس رطوبت (درصد)
-constexpr float FOGGER_HUMIDITY_ON = 60.0f;
+constexpr float FOGGER_HUMIDITY_ON  = 60.0f;
 constexpr float FOGGER_HUMIDITY_OFF = 70.0f;
 
 // روشنایی بر اساس زمان‌بندی (ساعت 24 ساعته)
-constexpr int LIGHT_ON_HOUR = 8;
+constexpr int LIGHT_ON_HOUR  = 8;
 constexpr int LIGHT_OFF_HOUR = 20;
 
-// فن بر اساس زمان‌بندی (علاوه بر دما)
-constexpr int FAN_ON_HOUR = 8;
+// فن بر اساس زمان‌بندی
+constexpr int FAN_ON_HOUR  = 8;
 constexpr int FAN_OFF_HOUR = 20;
 
-// مه‌ساز بر اساس زمان‌بندی (علاوه بر رطوبت)
-constexpr int FOGGER_ON_HOUR = 6;
+// مه‌ساز بر اساس زمان‌بندی
+constexpr int FOGGER_ON_HOUR  = 6;
 constexpr int FOGGER_OFF_HOUR = 22;
 
-// پمپ بر اساس زمان‌بندی (پمپ آبشار - هم‌زمان با ساعات روشنایی)
-constexpr int PUMP_ON_HOUR = 8;
+// پمپ بر اساس زمان‌بندی
+constexpr int PUMP_ON_HOUR  = 8;
 constexpr int PUMP_OFF_HOUR = 20;
 
 //-------------- NTP (Time Sync) ---------
 constexpr char NTP_SERVER[] = "pool.ntp.org";
-
-// آفست منطقهٔ زمانی به ثانیه (پیش‌فرض : ایران +3:30)
 constexpr long NTP_GMT_OFFSET_SEC = 12600;
 constexpr int NTP_DAYLIGHT_OFFSET_SEC = 0;
 
