@@ -1,12 +1,16 @@
 /*
 ------------------------------------------------------------
 GlassGarden
+
 File : SystemManager.cpp
+
 وظیفه:
 راه‌اندازی و مدیریت کل سیستم
-Version : 1.1.0 (اصلاح ترتیب اجرا)
+
+Version : 1.0.0
 ------------------------------------------------------------
 */
+
 #include "SystemManager.h"
 #include "../hardware/Hardware.h"
 #include "../network/NetworkManager.h"
@@ -19,6 +23,9 @@ Version : 1.1.0 (اصلاح ترتیب اجرا)
 static NetworkManager network;
 static BlynkManager blynk;
 
+// معرفی تابع برای جلوگیری از حذف فایل توسط کامپایلر
+extern void registerBlynkHandlers(); 
+
 void SystemManager::begin()
 {
     Hardware::begin();
@@ -28,6 +35,9 @@ void SystemManager::begin()
     automation.begin();
     network.begin();
     blynk.begin();
+    
+    // فراخوانی تابع برای فعال‌سازی دکمه‌های دستی
+    registerBlynkHandlers(); 
 }
 
 void SystemManager::update()
@@ -35,7 +45,7 @@ void SystemManager::update()
     network.update();
     devices.update();
     sensors.update();
-    blynk.update();          // ← اول فرمان‌های Blynk پردازش شود
-    automation.update();     // ← بعد اتوماسیون با وضعیت جدید اجرا شود
+    blynk.update();          
+    automation.update();     
     state.update();
 }
