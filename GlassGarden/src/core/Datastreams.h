@@ -51,11 +51,13 @@ constexpr uint8_t VPIN_HUMIDITY = V2;
 // سوییچ حالت AUTO / MANUAL
 constexpr uint8_t VPIN_AUTO_MODE = V6;
 
+// سطح آب مخزن (٪)
+constexpr uint8_t VPIN_WATER_LEVEL = V7;
+
 //============================================================
 // Future
 //============================================================
 
-// constexpr uint8_t VPIN_WATER_LEVEL = V7;
 // constexpr uint8_t VPIN_WATER_TEMP  = V8;
 // constexpr uint8_t VPIN_LIGHT_LEVEL = V9;
 // constexpr uint8_t VPIN_WIFI        = V10;

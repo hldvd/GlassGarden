@@ -36,6 +36,14 @@ public:
     float temperature = 0.0f;
     float humidity = 0.0f;
 
+    // سطح آب مخزن (٪) بر اساس سنسور آنالوگ P100
+    int waterLevelPercent = 0;
+
+    // true = مخزن آب خالی است (هشدار)
+    // با هیسترزیس در SensorManager تعیین می‌شود تا
+    // نوسان مقدار خام سنسور باعث تغییر مکرر نشود
+    bool waterEmpty = false;
+
     // زمان آخرین خواندن معتبر سنسور DHT (میلی‌ثانیه از بوت)
     // توسط SensorManager بروزرسانی می‌شود؛ برای تشخیص
     // قطعی طولانی سنسور و ورود به Safe Mode استفاده می‌شود

@@ -1,0 +1,151 @@
+diff --git a/GlassGarden/src/blynk/BlynkManager.cpp b/GlassGarden/src/blynk/BlynkManager.cpp
+index 1ca849c..472b816 100644
+--- a/GlassGarden/src/blynk/BlynkManager.cpp
++++ b/GlassGarden/src/blynk/BlynkManager.cpp
+@@ -26,6 +26,13 @@ unsigned long blynkSensorSendTimer = 0;
+ 
+ constexpr unsigned long BLYNK_SENSOR_SEND_INTERVAL = 5000;
+ 
++// وضعیت ارسال هشدار "پایان آب"
++static bool waterAlertSent = false;
++static unsigned long waterAlertLastSentMs = 0;
++
++// فاصلهٔ یادآوری هشدار تا زمانی که مخزن پر شود (۳۰ دقیقه)
++constexpr unsigned long WATER_ALERT_REPEAT_INTERVAL = 1800000;
++
+ //------------------------------------------------------------
+ // راه‌اندازی
+ //------------------------------------------------------------
+@@ -94,6 +101,29 @@ void BlynkManager::update()
+             Blynk.virtualWrite(VPIN_FOGGER, state.fogger ? 1 : 0);
+             Blynk.virtualWrite(VPIN_FAN, state.fan ? 1 : 0);
+             Blynk.virtualWrite(VPIN_PUMP, state.pump ? 1 : 0);
++
++            Blynk.virtualWrite(VPIN_WATER_LEVEL, state.waterLevelPercent);
++        }
++
++        //------------------------------------------------
++        // هشدار پایان آب مخزن
++        // در لحظهٔ خالی‌شدن یک بار، و سپس هر ۳۰ دقیقه
++        // به‌عنوان یادآوری تا زمانی که آب اضافه شود
++        //------------------------------------------------
++
++        if (state.waterEmpty)
++        {
++            if (!waterAlertSent || (millis() - waterAlertLastSentMs >= WATER_ALERT_REPEAT_INTERVAL))
++            {
++                Blynk.logEvent("water_empty", "مخزن آب خالی است! لطفاً آب اضافه کنید.");
++
++                waterAlertSent = true;
++                waterAlertLastSentMs = millis();
++            }
++        }
++        else
++        {
++            waterAlertSent = false;
+         }
+     }
+     else
+@@ -118,6 +148,8 @@ void BlynkManager::syncState()
+ 
+     Blynk.virtualWrite(VPIN_TEMPERATURE, state.temperature);
+     Blynk.virtualWrite(VPIN_HUMIDITY, state.humidity);
++
++    Blynk.virtualWrite(VPIN_WATER_LEVEL, state.waterLevelPercent);
+ }
+ 
+ //------------------------------------------------------------
+diff --git a/GlassGarden/src/core/Config.h b/GlassGarden/src/core/Config.h
+index 4731191..284174c 100644
+--- a/GlassGarden/src/core/Config.h
++++ b/GlassGarden/src/core/Config.h
+@@ -46,6 +46,10 @@ constexpr bool OUTPUT_ACTIVE_HIGH = false;
+ constexpr uint16_t WATER_LEVEL_EMPTY = 500;
+ constexpr uint16_t WATER_LEVEL_FULL  = 3500;
+ 
++// حاشیهٔ هیسترزیس (واحد خام ADC) برای خروج از حالت "خالی"
++// جلوگیری از نوسان سریع هشدار وقتی مقدار خام نزدیک مرز است
++constexpr uint16_t WATER_LEVEL_EMPTY_HYSTERESIS = 150;
++
+ //-------------- Automation --------------
+ constexpr bool AUTOMATION_ENABLED = true;
+ 
+diff --git a/GlassGarden/src/core/Datastreams.h b/GlassGarden/src/core/Datastreams.h
+index 05a1ffe..9e0806d 100644
+--- a/GlassGarden/src/core/Datastreams.h
++++ b/GlassGarden/src/core/Datastreams.h
+@@ -51,11 +51,13 @@ constexpr uint8_t VPIN_HUMIDITY = V2;
+ // سوییچ حالت AUTO / MANUAL
+ constexpr uint8_t VPIN_AUTO_MODE = V6;
+ 
++// سطح آب مخزن (٪)
++constexpr uint8_t VPIN_WATER_LEVEL = V7;
++
+ //============================================================
+ // Future
+ //============================================================
+ 
+-// constexpr uint8_t VPIN_WATER_LEVEL = V7;
+ // constexpr uint8_t VPIN_WATER_TEMP  = V8;
+ // constexpr uint8_t VPIN_LIGHT_LEVEL = V9;
+ // constexpr uint8_t VPIN_WIFI        = V10;
+diff --git a/GlassGarden/src/sensors/SensorManager.cpp b/GlassGarden/src/sensors/SensorManager.cpp
+index 990f838..2b48af5 100644
+--- a/GlassGarden/src/sensors/SensorManager.cpp
++++ b/GlassGarden/src/sensors/SensorManager.cpp
+@@ -42,6 +42,8 @@ void SensorManager::begin()
+ {
+     dht.begin();
+ 
++    pinMode(WATER_PIN, INPUT);
++
+     // شمارش قطعی سنسور از لحظهٔ بوت آغاز می‌شود، نه از epoch=0
+     // (تا Safe Mode بلافاصله بعد از بوت فعال نشود)
+     state.lastValidSensorReadMs = millis();
+@@ -72,4 +74,26 @@ void SensorManager::update()
+     state.temperature = t;
+     state.humidity = h;
+     state.lastValidSensorReadMs = millis();
++
++    //--------------------------------------------------------
++    // سطح آب مخزن (سنسور آنالوگ P100)
++    //--------------------------------------------------------
++
++    int raw = analogRead(WATER_PIN);
++
++    int percent = map(raw, WATER_LEVEL_EMPTY, WATER_LEVEL_FULL, 0, 100);
++    percent = constrain(percent, 0, 100);
++
++    state.waterLevelPercent = percent;
++
++    // هیسترزیس: وقتی خالی شد، تا رسیدن به EMPTY + حاشیه
++    // در حالت "خالی" باقی می‌ماند (از نوسان هشدار جلوگیری می‌کند)
++    if (!state.waterEmpty && raw <= WATER_LEVEL_EMPTY)
++    {
++        state.waterEmpty = true;
++    }
++    else if (state.waterEmpty && raw >= (WATER_LEVEL_EMPTY + WATER_LEVEL_EMPTY_HYSTERESIS))
++    {
++        state.waterEmpty = false;
++    }
+ }
+\ No newline at end of file
+diff --git a/GlassGarden/src/state/StateManager.h b/GlassGarden/src/state/StateManager.h
+index 5645e16..c5853dd 100644
+--- a/GlassGarden/src/state/StateManager.h
++++ b/GlassGarden/src/state/StateManager.h
+@@ -36,6 +36,14 @@ public:
+     float temperature = 0.0f;
+     float humidity = 0.0f;
+ 
++    // سطح آب مخزن (٪) بر اساس سنسور آنالوگ P100
++    int waterLevelPercent = 0;
++
++    // true = مخزن آب خالی است (هشدار)
++    // با هیسترزیس در SensorManager تعیین می‌شود تا
++    // نوسان مقدار خام سنسور باعث تغییر مکرر نشود
++    bool waterEmpty = false;
++
+     // زمان آخرین خواندن معتبر سنسور DHT (میلی‌ثانیه از بوت)
+     // توسط SensorManager بروزرسانی می‌شود؛ برای تشخیص
+     // قطعی طولانی سنسور و ورود به Safe Mode استفاده می‌شود

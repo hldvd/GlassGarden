@@ -26,7 +26,7 @@ constexpr char WIFI_PASSWORD[] = "sma28152";
 
 //-------------- GPIO --------------------
 // رله‌ها (Active LOW)
-constexpr uint8_t PUMP_PIN      = 23;  // 💧 رله ۱
+constexpr uint8_t PUMP_PIN      = 26;  // 💧 رله ۱
 constexpr uint8_t LIGHT_PIN     = 27;  // 💡 رله ۲
 constexpr uint8_t FOGGER_PIN    = 32;  // 💨 رله ۳
 constexpr uint8_t FAN_PIN       = 33;  // 🌀 رله ۴
@@ -45,6 +45,10 @@ constexpr bool OUTPUT_ACTIVE_HIGH = false;
 //-------------- Water Level -------------
 constexpr uint16_t WATER_LEVEL_EMPTY = 500;
 constexpr uint16_t WATER_LEVEL_FULL  = 3500;
+
+// حاشیهٔ هیسترزیس (واحد خام ADC) برای خروج از حالت "خالی"
+// جلوگیری از نوسان سریع هشدار وقتی مقدار خام نزدیک مرز است
+constexpr uint16_t WATER_LEVEL_EMPTY_HYSTERESIS = 150;
 
 //-------------- Automation --------------
 constexpr bool AUTOMATION_ENABLED = true;
