@@ -16,13 +16,13 @@
 constexpr uint32_t SERIAL_BAUDRATE = 115200;
 
 //-------------- WiFi --------------------
-constexpr char WIFI_SSID[] = "Xiaomi 11 Lite 5G NE";
-constexpr char WIFI_PASSWORD[] = "sma28152";
+constexpr char WIFI_SSID[] = "******";
+constexpr char WIFI_PASSWORD[] = "*****";
 
 //-------------- Blynk -------------------
-#define BLYNK_TEMPLATE_ID "TMPL6BugEIoP9"
+#define BLYNK_TEMPLATE_ID "****"
 #define BLYNK_TEMPLATE_NAME "GlassGarden v1"
-#define BLYNK_AUTH_TOKEN "eCG1Cwp3-E-DE_tUG3WYD-UlF5bseUZp"
+#define BLYNK_AUTH_TOKEN "*****8"
 
 //-------------- GPIO --------------------
 // رله‌ها (Active LOW)
