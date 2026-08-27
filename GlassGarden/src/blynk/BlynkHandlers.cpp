@@ -5,11 +5,12 @@ File : BlynkHandlers.cpp
 وظیفه:
 دریافت فرمان‌های اپلیکیشن Blynk و انتقال آن‌ها
 به DeviceManager
-Version : 1.1.1 (خطایابی کامل همه دکمه‌ها)
+Version : 1.1.3 (لاگ با timestamp و RSSI برای دیباگ تاخیر)
 ------------------------------------------------------------
 */
 #include "../core/Config.h"
 #include <Arduino.h>
+#include <WiFi.h>
 #include <BlynkApiArduino.h>
 #include "../core/Datastreams.h"
 #include "../devices/DeviceManager.h"
@@ -28,7 +29,7 @@ void registerBlynkHandlers()
 BLYNK_WRITE(V0)
 {
     int val = param.asInt();
-    Serial.printf("[Blynk-CMD] V0 Light = %d\n", val);
+    Serial.printf("[Blynk-CMD] t=%lu ms | RSSI=%d dBm | V0 Light = %d\n", millis(), WiFi.RSSI(), val);
     if (val) devices.lightOn();
     else     devices.lightOff();
 }
@@ -39,7 +40,7 @@ BLYNK_WRITE(V0)
 BLYNK_WRITE(V3)
 {
     int val = param.asInt();
-    Serial.printf("[Blynk-CMD] V3 Fogger = %d\n", val);
+    Serial.printf("[Blynk-CMD] t=%lu ms | RSSI=%d dBm | V3 Fogger = %d\n", millis(), WiFi.RSSI(), val);
     if (val) devices.foggerOn();
     else     devices.foggerOff();
 }
@@ -50,7 +51,7 @@ BLYNK_WRITE(V3)
 BLYNK_WRITE(V4)
 {
     int val = param.asInt();
-    Serial.printf("[Blynk-CMD] V4 Fan = %d\n", val);
+    Serial.printf("[Blynk-CMD] t=%lu ms | RSSI=%d dBm | V4 Fan = %d\n", millis(), WiFi.RSSI(), val);
     if (val) devices.fanOn();
     else     devices.fanOff();
 }
@@ -61,7 +62,7 @@ BLYNK_WRITE(V4)
 BLYNK_WRITE(V5)
 {
     int val = param.asInt();
-    Serial.printf("[Blynk-CMD] V5 Pump = %d\n", val);
+    Serial.printf("[Blynk-CMD] t=%lu ms | RSSI=%d dBm | V5 Pump = %d\n", millis(), WiFi.RSSI(), val);
     if (val) devices.pumpOn();
     else     devices.pumpOff();
 }
@@ -72,6 +73,6 @@ BLYNK_WRITE(V5)
 BLYNK_WRITE(V6)
 {
     state.autoMode = param.asInt();
-    Serial.printf("[Blynk-CMD] V6 Auto = %d (%s)\n",
-        state.autoMode, state.autoMode ? "خودکار" : "دستی");
+    Serial.printf("[Blynk-CMD] t=%lu ms | RSSI=%d dBm | V6 Auto = %d (%s)\n",
+        millis(), WiFi.RSSI(), state.autoMode, state.autoMode ? "خودکار" : "دستی");
 }

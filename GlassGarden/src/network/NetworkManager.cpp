@@ -61,6 +61,13 @@ void NetworkManager::update()
 
             Serial.println(WiFi.localIP());
 
+            // غیرفعال کردن Modem Sleep رادیوی WiFi
+            // بدون این خط، ESP32 به‌صورت پیش‌فرض بین بسته‌ها
+            // رادیو را خاموش/روشن می‌کند و همین باعث تاخیر
+            // تجمعی در دریافت فرمان‌های دستی از Blynk Cloud
+            // می‌شود (هرچه فرمان بیشتر، تاخیر بیشتر)
+            WiFi.setSleep(false);
+
             // همگام‌سازی ساعت برای اتوماسیون زمان‌بندی‌شده
             configTime(NTP_GMT_OFFSET_SEC, NTP_DAYLIGHT_OFFSET_SEC, NTP_SERVER);
 

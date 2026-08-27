@@ -14,6 +14,11 @@ Version : 1.0.0
 #include "../core/Config.h"
 
 #include <WiFi.h>
+
+
+#define BLYNK_PRINT Serial
+#define BLYNK_HEARTBEAT 30   // افزایش فاصلهٔ heartbeat از 10 به 30 ثانیه
+
 #include <BlynkSimpleEsp32.h>
 
 #include "BlynkManager.h"
@@ -25,13 +30,6 @@ unsigned long blynkReconnectTimer = 0;
 unsigned long blynkSensorSendTimer = 0;
 
 constexpr unsigned long BLYNK_SENSOR_SEND_INTERVAL = 5000;
-
-// وضعیت ارسال هشدار "پایان آب"
-static bool waterAlertSent = false;
-static unsigned long waterAlertLastSentMs = 0;
-
-// فاصلهٔ یادآوری هشدار تا زمانی که مخزن پر شود (۳۰ دقیقه)
-constexpr unsigned long WATER_ALERT_REPEAT_INTERVAL = 1800000;
 
 //------------------------------------------------------------
 // راه‌اندازی
@@ -101,29 +99,6 @@ void BlynkManager::update()
             Blynk.virtualWrite(VPIN_FOGGER, state.fogger ? 1 : 0);
             Blynk.virtualWrite(VPIN_FAN, state.fan ? 1 : 0);
             Blynk.virtualWrite(VPIN_PUMP, state.pump ? 1 : 0);
-
-            Blynk.virtualWrite(VPIN_WATER_LEVEL, state.waterLevelPercent);
-        }
-
-        //------------------------------------------------
-        // هشدار پایان آب مخزن
-        // در لحظهٔ خالی‌شدن یک بار، و سپس هر ۳۰ دقیقه
-        // به‌عنوان یادآوری تا زمانی که آب اضافه شود
-        //------------------------------------------------
-
-        if (state.waterEmpty)
-        {
-            if (!waterAlertSent || (millis() - waterAlertLastSentMs >= WATER_ALERT_REPEAT_INTERVAL))
-            {
-                Blynk.logEvent("water_empty", "مخزن آب خالی است! لطفاً آب اضافه کنید.");
-
-                waterAlertSent = true;
-                waterAlertLastSentMs = millis();
-            }
-        }
-        else
-        {
-            waterAlertSent = false;
         }
     }
     else
@@ -148,8 +123,6 @@ void BlynkManager::syncState()
 
     Blynk.virtualWrite(VPIN_TEMPERATURE, state.temperature);
     Blynk.virtualWrite(VPIN_HUMIDITY, state.humidity);
-
-    Blynk.virtualWrite(VPIN_WATER_LEVEL, state.waterLevelPercent);
 }
 
 //------------------------------------------------------------
