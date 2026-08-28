@@ -32,7 +32,7 @@ constexpr uint8_t FOGGER_PIN    = 32;  // 💨 رله ۳
 constexpr uint8_t FAN_PIN       = 33;  // 🌀 رله ۴
 
 //-------------- Sensors -----------------
-constexpr uint8_t DHT_PIN       = 17;  // 🌡️ AM2302
+constexpr uint8_t DHT_PIN       = 17;  // 🌡️ DHT22
 constexpr uint8_t WATER_PIN     = 4;   // 📏 سنسور سطح آب P100
 
 // نوع سنسور : 11 = DHT11 | 22 = DHT22/AM2302 | 21 = DHT21
