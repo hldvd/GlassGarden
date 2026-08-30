@@ -50,7 +50,6 @@ void BlynkManager::begin()
 
 void BlynkManager::update()
 {
-    // اگر WiFi قطع است هیچ کاری انجام نده
     if (!state.wifiConnected)
     {
         connected = false;
@@ -58,15 +57,12 @@ void BlynkManager::update()
         return;
     }
 
-    // هر ۵ ثانیه یکبار برای اتصال تلاش کن
     if (!Blynk.connected())
     {
         if (millis() - blynkReconnectTimer >= 5000)
         {
             blynkReconnectTimer = millis();
-
             Serial.println("[Blynk] Connecting...");
-
             Blynk.connect(1000);
         }
     }
@@ -79,26 +75,32 @@ void BlynkManager::update()
         {
             connected = true;
             state.blynkConnected = true;
-
             Serial.println("[Blynk] Connected");
-
             syncState();
         }
 
-        // ارسال دوره‌ای دما، رطوبت و وضعیت تجهیزات
-        // (لازم است چون AutomationManager می‌تواند بدون دستور از اپ
-        // وضعیت تجهیزات را تغییر دهد)
-        if (millis() - blynkSensorSendTimer >= BLYNK_SENSOR_SEND_INTERVAL)
+        //------------------------------------------------
+        // ارسال staggered: هر 800ms یک virtualWrite
+        // به جای 6 تا پشت سر هم
+        //------------------------------------------------
+        static uint8_t sendStep = 0;
+        if (millis() - blynkSensorSendTimer >= 800)
         {
             blynkSensorSendTimer = millis();
 
-            Blynk.virtualWrite(VPIN_TEMPERATURE, state.temperature);
-            Blynk.virtualWrite(VPIN_HUMIDITY, state.humidity);
+            switch (sendStep)
+            {
+                case 0:  Blynk.virtualWrite(VPIN_TEMPERATURE, state.temperature); break;
+                case 1:  Blynk.virtualWrite(VPIN_HUMIDITY, state.humidity); break;
+                case 2:  Blynk.virtualWrite(VPIN_LIGHT, state.light ? 1 : 0); break;
+                case 3:  Blynk.virtualWrite(VPIN_FOGGER, state.fogger ? 1 : 0); break;
+                case 4:  Blynk.virtualWrite(VPIN_FAN, state.fan ? 1 : 0); break;
+                case 5:  Blynk.virtualWrite(VPIN_PUMP, state.pump ? 1 : 0); break;
+                case 6:  Blynk.virtualWrite(VPIN_WATER_LEVEL, state.waterLevelPercent); break;
+            }
 
-            Blynk.virtualWrite(VPIN_LIGHT, state.light ? 1 : 0);
-            Blynk.virtualWrite(VPIN_FOGGER, state.fogger ? 1 : 0);
-            Blynk.virtualWrite(VPIN_FAN, state.fan ? 1 : 0);
-            Blynk.virtualWrite(VPIN_PUMP, state.pump ? 1 : 0);
+            sendStep++;
+            if (sendStep > 6) sendStep = 0;
         }
     }
     else

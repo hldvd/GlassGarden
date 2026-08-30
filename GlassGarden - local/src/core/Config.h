@@ -15,14 +15,8 @@
 //-------------- Serial ------------------
 constexpr uint32_t SERIAL_BAUDRATE = 115200;
 
-//-------------- WiFi --------------------
-constexpr char WIFI_SSID[] = "******";
-constexpr char WIFI_PASSWORD[] = "*****";
-
-//-------------- Blynk -------------------
-#define BLYNK_TEMPLATE_ID "****"
-#define BLYNK_TEMPLATE_NAME "GlassGarden v1"
-#define BLYNK_AUTH_TOKEN "*****8"
+//-------------- WiFi & Blynk (from ConfigLocal.h) --------------------
+#include "ConfigLocal.h"
 
 //-------------- GPIO --------------------
 // رله‌ها (Active LOW)

@@ -223,6 +223,13 @@ connect();
 void WebUIManager::begin()
 {
     setupRoutes();
+    
+    // ← این خط جدیده (ثبت handler دریافت پیام WebSocket)
+    ws.onEvent([this](AsyncWebSocket* server, AsyncWebSocketClient* client, 
+                      AwsEventType type, void* arg, uint8_t* data, size_t len) {
+        this->onWsEvent(client, type, arg, data, len);
+    });
+    
     server.addHandler(&ws);
     server.begin();
     Serial.println("[WebUI] Server started on http://" + WiFi.localIP().toString());
