@@ -69,8 +69,6 @@ void BlynkManager::update()
 
             Blynk.connect(1000);
         }
-        
-        
     }
 
     if (Blynk.connected())
