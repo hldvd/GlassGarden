@@ -26,6 +26,8 @@ Version : 1.0.0
 #include "../core/Datastreams.h"
 #include "../state/StateManager.h"
 
+BlynkManager blynk;   // ← این خط جدیده
+
 unsigned long blynkReconnectTimer = 0;
 unsigned long blynkSensorSendTimer = 0;
 

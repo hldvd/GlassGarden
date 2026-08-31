@@ -33,3 +33,4 @@ private:
 
     static const char INDEX_HTML[] PROGMEM;
 };
+extern WebUIManager webUI;

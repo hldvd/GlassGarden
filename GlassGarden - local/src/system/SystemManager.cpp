@@ -21,9 +21,7 @@ Version : 1.0.0
 #include "../automation/AutomationManager.h"
 #include "../webui/WebUIManager.h"  // ← اضافه شد
 
-static NetworkManager network;
-static BlynkManager blynk;
-static WebUIManager webUI;          // ← اضافه شد
+
 
 // معرفی تابع برای جلوگیری از حذف فایل توسط کامپایلر
 extern void registerBlynkHandlers(); 

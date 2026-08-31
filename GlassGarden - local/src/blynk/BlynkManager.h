@@ -36,3 +36,4 @@ private:
     bool connected = false;
 
 };
+extern BlynkManager blynk;
