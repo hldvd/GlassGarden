@@ -3,13 +3,17 @@
 #include "../state/StateManager.h"
 #include "../devices/DeviceManager.h"
 #include "../automation/AutomationManager.h"
+#include "Images.h"
 
 WebUIManager webUI;
 
 // ============================================================
-// HTML/CSS/JS Dashboard (Embedded in PROGMEM)
+// HTML Template (بدون base64 در raw string)
 // ============================================================
-const char WebUIManager::INDEX_HTML[] PROGMEM = R"rawliteral(
+// استفاده از template با placeholder برای جایگذاری base64
+// ============================================================
+
+const char WebUIManager::INDEX_HTML_TEMPLATE[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
@@ -20,11 +24,64 @@ const char WebUIManager::INDEX_HTML[] PROGMEM = R"rawliteral(
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Segoe UI',Tahoma,sans-serif;background:#0f172a;color:#e2e8f0;line-height:1.6;padding:16px}
   .container{max-width:800px;margin:0 auto}
-  header{text-align:center;margin-bottom:24px}
-  header h1{color:#4ade80;font-size:1.8rem}
-  .status{display:inline-flex;align-items:center;gap:6px;background:#1e293b;padding:6px 14px;border-radius:20px;font-size:.85rem;margin-top:8px}
+  
+  header {
+    background-color: #e3d9ce;
+    border-radius: 20px;
+    padding: 20px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    min-height: 100px;
+  }
+
+  header::before {
+    content: "";
+    position: absolute;
+    right: -10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 120px;
+    height: 120px;
+    background-image: var(--img-logo);
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+
+  header::after {
+    content: "";
+    position: absolute;
+    left: -10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 120px;
+    height: 120px;
+    background-image: var(--img-nature);
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+
+  .status {
+    position: relative;
+    z-index: 1;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.3);
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: .9rem;
+  }
+  
   .status-dot{width:10px;height:10px;border-radius:50%;background:#ef4444}
   .status-dot.online{background:#22c55e;box-shadow:0 0 8px #22c55e}
+  
+  header h1{color:#4a6741;font-size:1.6rem;position:relative;z-index:1}
   
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
   .card{background:#1e293b;border-radius:12px;padding:16px;text-align:center;border:1px solid #334155;transition:.2s}
@@ -58,15 +115,16 @@ const char WebUIManager::INDEX_HTML[] PROGMEM = R"rawliteral(
   .footer{text-align:center;margin-top:24px;font-size:.75rem;color:#64748b}
   
   @media(max-width:480px){
-    header h1{font-size:1.4rem}
+    header h1{font-size:1.2rem}
     .card-value{font-size:1.3rem}
+    header{padding:15px 20px}
+    header::before, header::after{width:80px;height:80px}
   }
 </style>
 </head>
 <body>
 <div class="container">
   <header>
-    <h1>🌿 GlassGarden</h1>
     <div class="status">
       <span class="status-dot" id="connDot"></span>
       <span id="connText">در حال اتصال...</span>
@@ -206,7 +264,7 @@ function setMode(auto){
 function addLog(text){
   const box = document.getElementById('logBox');
   const t = new Date().toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  box.insertAdjacentHTML('afterbegin', `<div class="log-entry"><span class="log-time">${t}</span> ${text}</div>`);
+  box.insertAdjacentHTML('afterbegin', '<div class="log-entry"><span class="log-time">'+t+'</span> '+text+'</div>');
   if(box.children.length>20) box.lastChild.remove();
 }
 
@@ -224,7 +282,6 @@ void WebUIManager::begin()
 {
     setupRoutes();
     
-    // ← این خط جدیده (ثبت handler دریافت پیام WebSocket)
     ws.onEvent([this](AsyncWebSocket* server, AsyncWebSocketClient* client, 
                       AwsEventType type, void* arg, uint8_t* data, size_t len) {
         this->onWsEvent(client, type, arg, data, len);
@@ -235,14 +292,29 @@ void WebUIManager::begin()
     Serial.println("[WebUI] Server started on http://" + WiFi.localIP().toString());
 }
 
+// ============================================================
+// تولید HTML با جایگذاری base64 تصاویر
+// ============================================================
+String WebUIManager::getIndexedHtml()
+{
+    String html = FPSTR(INDEX_HTML_TEMPLATE);
+    
+    // جایگزینی CSS variables با data URI کامل
+    html.replace("var(--img-logo)", String("url(\"") + FPSTR(CSS_LOGO_URL) + "\")");
+    html.replace("var(--img-nature)", String("url(\"") + FPSTR(CSS_NATURE_URL) + "\")");
+    
+    return html;
+}
+
 void WebUIManager::setupRoutes()
 {
-    // صفحه اصلی
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest* request){
-        request->send_P(200, "text/html", INDEX_HTML);
+    // صفحه اصلی با تصاویر
+    server.on("/", HTTP_GET, [this](AsyncWebServerRequest* request){
+        String html = this->getIndexedHtml();
+        request->send(200, "text/html", html);
     });
 
-    // API کنترل تجهیزات (REST fallback)
+    // API کنترل تجهیزات
     server.on("/api/control", HTTP_POST,
         [](AsyncWebServerRequest* request){},
         NULL,
@@ -250,7 +322,7 @@ void WebUIManager::setupRoutes()
             handleApiControl(request, data, len);
         });
 
-    // API وضعیت فعلی (JSON)
+    // API وضعیت فعلی
     server.on("/api/state", HTTP_GET, [](AsyncWebServerRequest* request){
         StaticJsonDocument<512> doc;
         doc["temperature"] = state.temperature;
@@ -277,7 +349,8 @@ void WebUIManager::onWsEvent(AsyncWebSocketClient* client, AwsEventType type,
 {
     if (type == WS_EVT_CONNECT)
     {
-        Serial.printf("[WebUI] Client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+        Serial.printf("[WebUI] Client #%u connected from %s\n", 
+                      client->id(), client->remoteIP().toString().c_str());
         broadcastState();
     }
     else if (type == WS_EVT_DISCONNECT)
@@ -303,8 +376,6 @@ void WebUIManager::onWsEvent(AsyncWebSocketClient* client, AwsEventType type,
                 const char* device = doc["device"];
                 bool value = doc["value"];
                 
-                // فقط در حالت MANUAL اجازه کنترل مستقیم
-                // یا اگه AUTO باشه، لاگ بزن که فرمان دریافت شد ولی اتوماسیون override می‌کنه
                 if (!state.autoMode)
                 {
                     if (strcmp(device, "light") == 0)   value ? devices.lightOn() : devices.lightOff();
@@ -378,7 +449,6 @@ void WebUIManager::update()
 {
     ws.cleanupClients();
     
-    // ارسال وضعیت هر ۲ ثانیه به کلاینت‌های متصل
     static unsigned long lastBroadcast = 0;
     if (millis() - lastBroadcast >= 2000)
     {
