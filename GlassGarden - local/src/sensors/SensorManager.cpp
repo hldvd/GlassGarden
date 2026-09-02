@@ -86,20 +86,20 @@ void SensorManager::update()
 
     state.waterLevelPercent = percent;
 
-    // هیسترزیس بر اساس مقدار خام ADC (نه درصد)
-    // سنسور فقط دو حالت دارد: خالی یا پر
-    if (!state.waterEmpty && raw <= WATER_LEVEL_EMPTY)
+    // waterEmpty بر اساس درصد (نه raw) — وقتی 5% یا کمتر = خالی
+    // چون سنسور فقط خالی/پر دارد و raw دقیق نیست
+    if (!state.waterEmpty && percent <= 5)
     {
         state.waterEmpty = true;
-        Serial.printf("[Sensor] Water EMPTY detected! raw=%d\n", raw);
+        Serial.printf("[Sensor] Water EMPTY! raw=%d  percent=%d%%\n", raw, percent);
     }
-    else if (state.waterEmpty && raw >= (WATER_LEVEL_EMPTY + WATER_LEVEL_EMPTY_HYSTERESIS))
+    else if (state.waterEmpty && percent >= 15)
     {
         state.waterEmpty = false;
-        Serial.printf("[Sensor] Water REFILLED. raw=%d\n", raw);
+        Serial.printf("[Sensor] Water OK. raw=%d  percent=%d%%\n", raw, percent);
     }
 
-    // لاگ دیباگ: همیشه مقدار خام را نشان بده
+    // لاگ دیباگ هر ۵ ثانیه
     static unsigned long waterLogTimer = 0;
     if (millis() - waterLogTimer >= 5000)
     {
