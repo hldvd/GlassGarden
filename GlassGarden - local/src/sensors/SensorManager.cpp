@@ -13,7 +13,7 @@ File : SensorManager.cpp
 AutomationManager برای تشخیص Safe Mode
 استفاده می‌شود.
 
-Version : 1.1.0
+Version : 1.2.0
 ------------------------------------------------------------
 */
 
@@ -86,14 +86,25 @@ void SensorManager::update()
 
     state.waterLevelPercent = percent;
 
-    // هیسترزیس: وقتی خالی شد، تا رسیدن به EMPTY + حاشیه
-    // در حالت "خالی" باقی می‌ماند (از نوسان هشدار جلوگیری می‌کند)
+    // هیسترزیس بر اساس مقدار خام ADC (نه درصد)
+    // سنسور فقط دو حالت دارد: خالی یا پر
     if (!state.waterEmpty && raw <= WATER_LEVEL_EMPTY)
     {
         state.waterEmpty = true;
+        Serial.printf("[Sensor] Water EMPTY detected! raw=%d\n", raw);
     }
     else if (state.waterEmpty && raw >= (WATER_LEVEL_EMPTY + WATER_LEVEL_EMPTY_HYSTERESIS))
     {
         state.waterEmpty = false;
+        Serial.printf("[Sensor] Water REFILLED. raw=%d\n", raw);
+    }
+
+    // لاگ دیباگ: همیشه مقدار خام را نشان بده
+    static unsigned long waterLogTimer = 0;
+    if (millis() - waterLogTimer >= 5000)
+    {
+        waterLogTimer = millis();
+        Serial.printf("[Sensor] Water raw=%d  percent=%d%%  empty=%s\n",
+                      raw, percent, state.waterEmpty ? "YES" : "NO");
     }
 }

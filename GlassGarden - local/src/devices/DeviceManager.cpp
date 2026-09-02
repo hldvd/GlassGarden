@@ -17,6 +17,7 @@ Version : 1.1.0
 
 #include "DeviceManager.h"
 #include "../state/StateManager.h"
+#include <Arduino.h>
 
 DeviceManager devices;
 
