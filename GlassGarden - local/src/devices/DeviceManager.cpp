@@ -11,7 +11,7 @@ File : DeviceManager.cpp
 به این کلاس وارد می‌شوند و سپس به
 کلاس مربوط به هر تجهیز ارسال می‌شوند.
 
-Version : 1.1.0
+Version : 1.2.0
 ------------------------------------------------------------
 */
 
@@ -39,7 +39,21 @@ void DeviceManager::begin()
 
 void DeviceManager::update()
 {
-
+    // Water Empty Protection: در هر حالت (AUTO/MANUAL)
+    // اگر آب خالی شد و پمپ/مه‌ساز روشن هستند، فوراً خاموش شوند
+    if (state.waterEmpty)
+    {
+        if (state.fogger)
+        {
+            foggerOff();
+            Serial.println("[DeviceManager] Fogger auto-OFF: water empty");
+        }
+        if (state.pump)
+        {
+            pumpOff();
+            Serial.println("[DeviceManager] Pump auto-OFF: water empty");
+        }
+    }
 }
 
 //------------------------------------------------------------
