@@ -6,14 +6,10 @@ File : SensorManager.cpp
 
 وظیفه:
 خواندن دما و رطوبت از سنسور DHT
+و سطح آب از فلوتر سوئیچ (دو سیمه)
 و ذخیره در StateManager
 
-همچنین ثبت زمان آخرین خواندن معتبر
-(state.lastValidSensorReadMs) که توسط
-AutomationManager برای تشخیص Safe Mode
-استفاده می‌شود.
-
-Version : 1.2.0
+Version : 1.3.0
 ------------------------------------------------------------
 */
 
@@ -42,10 +38,11 @@ void SensorManager::begin()
 {
     dht.begin();
 
-    pinMode(WATER_PIN, INPUT);
+    // فلوتر سوئیچ: پین ۴ با pull-up داخلی
+    // وقتی آب هست → کلید بسته → پین LOW
+    // وقتی آب نیست → کلید باز → پین HIGH
+    pinMode(WATER_PIN, INPUT_PULLUP);
 
-    // شمارش قطعی سنسور از لحظهٔ بوت آغاز می‌شود، نه از epoch=0
-    // (تا Safe Mode بلافاصله بعد از بوت فعال نشود)
     state.lastValidSensorReadMs = millis();
 }
 
@@ -62,49 +59,39 @@ void SensorManager::update()
 
     lastReadTime = millis();
 
+    //--------------------------------------------------------
+    // سنسور فلوتر (سطح آب) — همیشه بخوان
+    //--------------------------------------------------------
+
+    bool waterPresent = (digitalRead(WATER_PIN) == HIGH);  // HIGH = کلید بسته = آب هست
+
+    state.waterLevelPercent = waterPresent ? 100 : 0;
+
+    if (!state.waterEmpty && !waterPresent)
+    {
+        state.waterEmpty = true;
+        Serial.println("[Sensor] Water EMPTY! Float switch open.");
+    }
+    else if (state.waterEmpty && waterPresent)
+    {
+        state.waterEmpty = false;
+        Serial.println("[Sensor] Water present. Float switch closed.");
+    }
+
+    //--------------------------------------------------------
+    // سنسور DHT (دما و رطوبت)
+    //--------------------------------------------------------
+
     float h = dht.readHumidity();
     float t = dht.readTemperature();
 
     if (isnan(h) || isnan(t))
     {
-        Serial.println("[Sensor] Read failed");
+        Serial.println("[Sensor] DHT read failed");
         return;
     }
 
     state.temperature = t;
     state.humidity = h;
     state.lastValidSensorReadMs = millis();
-
-    //--------------------------------------------------------
-    // سطح آب مخزن (سنسور آنالوگ P100)
-    //--------------------------------------------------------
-
-    int raw = analogRead(WATER_PIN);
-
-    int percent = map(raw, WATER_LEVEL_EMPTY, WATER_LEVEL_FULL, 0, 100);
-    percent = constrain(percent, 0, 100);
-
-    state.waterLevelPercent = percent;
-
-    // waterEmpty بر اساس درصد (نه raw) — وقتی 5% یا کمتر = خالی
-    // چون سنسور فقط خالی/پر دارد و raw دقیق نیست
-    if (!state.waterEmpty && percent <= 5)
-    {
-        state.waterEmpty = true;
-        Serial.printf("[Sensor] Water EMPTY! raw=%d  percent=%d%%\n", raw, percent);
-    }
-    else if (state.waterEmpty && percent >= 15)
-    {
-        state.waterEmpty = false;
-        Serial.printf("[Sensor] Water OK. raw=%d  percent=%d%%\n", raw, percent);
-    }
-
-    // لاگ دیباگ هر ۵ ثانیه
-    static unsigned long waterLogTimer = 0;
-    if (millis() - waterLogTimer >= 5000)
-    {
-        waterLogTimer = millis();
-        Serial.printf("[Sensor] Water raw=%d  percent=%d%%  empty=%s\n",
-                      raw, percent, state.waterEmpty ? "YES" : "NO");
-    }
 }
