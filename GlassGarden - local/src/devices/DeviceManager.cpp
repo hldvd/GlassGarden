@@ -11,7 +11,7 @@ File : DeviceManager.cpp
 به این کلاس وارد می‌شوند و سپس به
 کلاس مربوط به هر تجهیز ارسال می‌شوند.
 
-Version : 1.0.0
+Version : 1.1.0
 ------------------------------------------------------------
 */
 
@@ -105,6 +105,11 @@ bool DeviceManager::fanState() const
 
 void DeviceManager::foggerOn()
 {
+    if (state.waterEmpty)
+    {
+        Serial.println("[DeviceManager] Fogger ON blocked: water empty!");
+        return;
+    }
     foggerDevice.on();
     state.fogger = true;
 }
@@ -134,6 +139,11 @@ bool DeviceManager::foggerState() const
 
 void DeviceManager::pumpOn()
 {
+    if (state.waterEmpty)
+    {
+        Serial.println("[DeviceManager] Pump ON blocked: water empty!");
+        return;
+    }
     pumpDevice.on();
     state.pump = true;
 }
