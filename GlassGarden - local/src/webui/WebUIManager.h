@@ -22,7 +22,7 @@ Version : 1.0.0
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
-#include "Images.h"  // ← اضافه شده
+#include "Images.h"
 
 class WebUIManager {
 public:

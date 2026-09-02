@@ -8,9 +8,9 @@
 WebUIManager webUI;
 
 // ============================================================
-// HTML Template (بدون base64 در raw string)
+// HTML Template
 // ============================================================
-// استفاده از template با placeholder برای جایگذاری base64
+// از __LOGO_URL__ و __NATURE_URL__ به عنوان مارکر استفاده می‌شود
 // ============================================================
 
 const char WebUIManager::INDEX_HTML_TEMPLATE[] PROGMEM = R"rawliteral(
@@ -24,9 +24,10 @@ const char WebUIManager::INDEX_HTML_TEMPLATE[] PROGMEM = R"rawliteral(
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Segoe UI',Tahoma,sans-serif;background:#0f172a;color:#e2e8f0;line-height:1.6;padding:16px}
   .container{max-width:800px;margin:0 auto}
-  
+
   header {
     background-color: #e3d9ce;
+    color: #0f172a;
     border-radius: 20px;
     padding: 20px 40px;
     display: flex;
@@ -40,29 +41,31 @@ const char WebUIManager::INDEX_HTML_TEMPLATE[] PROGMEM = R"rawliteral(
   header::before {
     content: "";
     position: absolute;
-    right: -10px;
+    left: 30px;
     top: 50%;
     transform: translateY(-50%);
     width: 120px;
     height: 120px;
-    background-image: var(--img-logo);
+    background-image: __LOGO_URL__;
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
+    z-index: 0;
   }
 
   header::after {
     content: "";
     position: absolute;
-    left: -10px;
+    right: 30px;
     top: 50%;
     transform: translateY(-50%);
-    width: 120px;
+    width: 220px;
     height: 120px;
-    background-image: var(--img-nature);
+    background-image: __NATURE_URL__;
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
+    z-index: 0;
   }
 
   .status {
@@ -77,19 +80,19 @@ const char WebUIManager::INDEX_HTML_TEMPLATE[] PROGMEM = R"rawliteral(
     border-radius: 20px;
     font-size: .9rem;
   }
-  
+
   .status-dot{width:10px;height:10px;border-radius:50%;background:#ef4444}
   .status-dot.online{background:#22c55e;box-shadow:0 0 8px #22c55e}
-  
+
   header h1{color:#4a6741;font-size:1.6rem;position:relative;z-index:1}
-  
+
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
   .card{background:#1e293b;border-radius:12px;padding:16px;text-align:center;border:1px solid #334155;transition:.2s}
   .card:hover{border-color:#4ade80}
   .card-icon{font-size:2rem;margin-bottom:6px}
   .card-value{font-size:1.6rem;font-weight:700;color:#4ade80}
   .card-label{font-size:.85rem;color:#94a3b8;margin-top:4px}
-  
+
   .controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
   .ctrl-card{background:#1e293b;border-radius:12px;padding:16px;border:1px solid #334155}
   .ctrl-card h3{font-size:1rem;margin-bottom:12px;color:#cbd5e1;display:flex;align-items:center;gap:8px}
@@ -101,19 +104,19 @@ const char WebUIManager::INDEX_HTML_TEMPLATE[] PROGMEM = R"rawliteral(
   input:checked + .slider:before{transform:translateX(26px)}
   .ctrl-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
   .ctrl-state{font-size:.8rem;color:#94a3b8}
-  
+
   .mode-bar{background:#1e293b;border-radius:12px;padding:16px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;border:1px solid #334155}
   .mode-btn{background:#334155;border:none;color:#e2e8f0;padding:10px 24px;border-radius:8px;cursor:pointer;font-size:.95rem;transition:.2s}
   .mode-btn.active{background:#4ade80;color:#0f172a;font-weight:700}
-  
+
   .logs{background:#1e293b;border-radius:12px;padding:16px;border:1px solid #334155;max-height:200px;overflow-y:auto}
   .logs h3{margin-bottom:10px;color:#cbd5e1;font-size:1rem}
   .log-entry{font-size:.8rem;padding:4px 0;border-bottom:1px solid #334155;color:#94a3b8}
   .log-entry:last-child{border:none}
   .log-time{color:#64748b}
-  
+
   .footer{text-align:center;margin-top:24px;font-size:.75rem;color:#64748b}
-  
+
   @media(max-width:480px){
     header h1{font-size:1.2rem}
     .card-value{font-size:1.3rem}
@@ -233,12 +236,12 @@ function updateUI(s){
   document.getElementById('valWater').textContent = s.waterLevelPercent;
   document.getElementById('valSafe').textContent = s.safeMode ? '⚠️ Safe Mode' : '✅ عادی';
   document.getElementById('valSafe').style.color = s.safeMode ? '#ef4444' : '#4ade80';
-  
+
   setSwitch('swLight','stLight',s.light);
   setSwitch('swFan','stFan',s.fan);
   setSwitch('swFogger','stFogger',s.fogger);
   setSwitch('swPump','stPump',s.pump);
-  
+
   document.getElementById('btnAuto').classList.toggle('active', s.autoMode);
   document.getElementById('btnManual').classList.toggle('active', !s.autoMode);
 }
@@ -281,28 +284,29 @@ connect();
 void WebUIManager::begin()
 {
     setupRoutes();
-    
+
     ws.onEvent([this](AsyncWebSocket* server, AsyncWebSocketClient* client, 
                       AwsEventType type, void* arg, uint8_t* data, size_t len) {
         this->onWsEvent(client, type, arg, data, len);
     });
-    
+
     server.addHandler(&ws);
     server.begin();
     Serial.println("[WebUI] Server started on http://" + WiFi.localIP().toString());
 }
 
 // ============================================================
-// تولید HTML با جایگذاری base64 تصاویر
+// تولید HTML با جایگذاری data URI تصاویر
 // ============================================================
 String WebUIManager::getIndexedHtml()
 {
     String html = FPSTR(INDEX_HTML_TEMPLATE);
-    
-    // جایگزینی CSS variables با data URI کامل
-    html.replace("var(--img-logo)", String("url(\"") + FPSTR(CSS_LOGO_URL) + "\")");
-    html.replace("var(--img-nature)", String("url(\"") + FPSTR(CSS_NATURE_URL) + "\")");
-    
+
+    // جایگزینی مارکرهای واضح با data URI کامل
+    // استفاده از __LOGO_URL__ به جای var(--img-logo) برای اطمینان از عدم تداخل
+    html.replace("__LOGO_URL__", String("url(\"") + FPSTR(CSS_LOGO_URL) + "\")");
+    html.replace("__NATURE_URL__", String("url(\"") + FPSTR(CSS_NATURE_URL) + "\")");
+
     return html;
 }
 
@@ -364,18 +368,18 @@ void WebUIManager::onWsEvent(AsyncWebSocketClient* client, AwsEventType type,
         {
             data[len] = 0;
             String msg = (char*)data;
-            
+
             StaticJsonDocument<256> doc;
             DeserializationError err = deserializeJson(doc, msg);
             if (err) return;
 
             const char* msgType = doc["type"];
-            
+
             if (strcmp(msgType, "cmd") == 0)
             {
                 const char* device = doc["device"];
                 bool value = doc["value"];
-                
+
                 if (!state.autoMode)
                 {
                     if (strcmp(device, "light") == 0)   value ? devices.lightOn() : devices.lightOff();
@@ -429,10 +433,10 @@ void WebUIManager::handleApiControl(AsyncWebServerRequest* request, uint8_t* dat
         request->send(400, "application/json", "{\"error\":\"invalid json\"}");
         return;
     }
-    
+
     const char* device = doc["device"];
     bool value = doc["value"];
-    
+
     if (!state.autoMode)
     {
         if (strcmp(device, "light") == 0)   value ? devices.lightOn() : devices.lightOff();
@@ -440,7 +444,7 @@ void WebUIManager::handleApiControl(AsyncWebServerRequest* request, uint8_t* dat
         else if (strcmp(device, "fogger") == 0) value ? devices.foggerOn() : devices.foggerOff();
         else if (strcmp(device, "pump") == 0)   value ? devices.pumpOn() : devices.pumpOff();
     }
-    
+
     broadcastState();
     request->send(200, "application/json", "{\"ok\":true}");
 }
@@ -448,7 +452,7 @@ void WebUIManager::handleApiControl(AsyncWebServerRequest* request, uint8_t* dat
 void WebUIManager::update()
 {
     ws.cleanupClients();
-    
+
     static unsigned long lastBroadcast = 0;
     if (millis() - lastBroadcast >= 2000)
     {

@@ -23,7 +23,7 @@ File : AutomationManager.cpp
 Auto) اعمال می‌شوند؛ فرمان‌های دستی/Blynk تحت تأثیر
 قرار نمی‌گیرند.
 
-Version : 1.2.0
+Version : 1.3.0
 ------------------------------------------------------------
 */
 
@@ -129,6 +129,26 @@ void AutomationManager::update()
     state.safeMode = (sinceLastValidRead >= SAFE_MODE_DHT_TIMEOUT_MS);
 
     //----------------------------------------------------
+    // Water Empty Protection : فوراً پمپ و مه‌ساز خاموش
+    //----------------------------------------------------
+
+    if (state.waterEmpty)
+    {
+        if (state.fogger)
+        {
+            devices.foggerOff();
+            foggerLastChangeMs = millis();
+            Serial.println("[Automation] Fogger forced OFF: water empty");
+        }
+        if (state.pump)
+        {
+            devices.pumpOff();
+            pumpLastChangeMs = millis();
+            Serial.println("[Automation] Pump forced OFF: water empty");
+        }
+    }
+
+    //----------------------------------------------------
     // بررسی معتبر بودن ساعت (بعد از همگام‌سازی NTP)
     //----------------------------------------------------
 
@@ -204,30 +224,35 @@ void AutomationManager::update()
         //----------------------------------------------------
         // مه‌ساز : رطوبت + زمان‌بندی
         // + محدودیت Minimum ON/OFF Time (30s)
+        // فقط اگر آب موجود باشد
         //----------------------------------------------------
 
-        bool foggerScheduleOn = timeValid && isWithinSchedule(FOGGER_ON_HOUR, FOGGER_OFF_HOUR, currentHour);
-
-        bool foggerOnCondition  = (state.humidity <= FOGGER_HUMIDITY_ON) || foggerScheduleOn;
-        bool foggerOffCondition = (state.humidity >= FOGGER_HUMIDITY_OFF) && !foggerScheduleOn;
-
-        if (foggerOnCondition && !state.fogger && canChangeState(foggerLastChangeMs))
+        if (!state.waterEmpty)
         {
-            devices.foggerOn();
-            foggerLastChangeMs = millis();
-        }
-        else if (foggerOffCondition && state.fogger && canChangeState(foggerLastChangeMs))
-        {
-            devices.foggerOff();
-            foggerLastChangeMs = millis();
+            bool foggerScheduleOn = timeValid && isWithinSchedule(FOGGER_ON_HOUR, FOGGER_OFF_HOUR, currentHour);
+
+            bool foggerOnCondition  = (state.humidity <= FOGGER_HUMIDITY_ON) || foggerScheduleOn;
+            bool foggerOffCondition = (state.humidity >= FOGGER_HUMIDITY_OFF) && !foggerScheduleOn;
+
+            if (foggerOnCondition && !state.fogger && canChangeState(foggerLastChangeMs))
+            {
+                devices.foggerOn();
+                foggerLastChangeMs = millis();
+            }
+            else if (foggerOffCondition && state.fogger && canChangeState(foggerLastChangeMs))
+            {
+                devices.foggerOff();
+                foggerLastChangeMs = millis();
+            }
         }
 
         //----------------------------------------------------
         // پمپ : فقط زمان‌بندی
         // + محدودیت Minimum ON/OFF Time (30s)
+        // فقط اگر آب موجود باشد
         //----------------------------------------------------
 
-        if (timeValid)
+        if (!state.waterEmpty && timeValid)
         {
             bool pumpScheduleOn = isWithinSchedule(PUMP_ON_HOUR, PUMP_OFF_HOUR, currentHour);
 
