@@ -5,7 +5,6 @@
 #include "../state/StateManager.h"
 #include "../devices/DeviceManager.h"
 #include "../automation/AutomationManager.h"
-#include "Images.h"
 
 WebUIManager webUI;
 
@@ -50,8 +49,10 @@ void WebUIManager::setupRoutes()
             handleApiControl(request, data, len);
         });
 
-    server.on("/api/state", HTTP_GET, [](AsyncWebServerRequest* request){
-        StaticJsonDocument<512> doc;
+    server.on("/api/state", HTTP_GET, [this](AsyncWebServerRequest* request){
+        JsonDocument doc;
+        
+        portENTER_CRITICAL(&this->stateMux);
         doc["temperature"] = state.temperature;
         doc["humidity"] = state.humidity;
         doc["waterLevelPercent"] = state.waterLevelPercent;
@@ -64,6 +65,7 @@ void WebUIManager::setupRoutes()
         doc["safeMode"] = state.safeMode;
         doc["wifiConnected"] = state.wifiConnected;
         doc["blynkConnected"] = state.blynkConnected;
+        portEXIT_CRITICAL(&this->stateMux);
 
         String response;
         serializeJson(doc, response);
@@ -89,26 +91,40 @@ void WebUIManager::onWsEvent(AsyncWebSocketClient* client, AwsEventType type,
         AwsFrameInfo* info = (AwsFrameInfo*)arg;
         if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT)
         {
-            data[len] = 0;
-            String msg = (char*)data;
+            // Fix 1: Safe copy — no buffer overflow
+            String msg;
+            msg.reserve(len);
+            for (size_t i = 0; i < len; i++) {
+                msg += (char)data[i];
+            }
             
-            StaticJsonDocument<256> doc;
-            DeserializationError err = deserializeJson(doc, msg);
+            JsonDocument doc;
+            DeserializationError err = deserializeJson(doc, msg.c_str());
             if (err) return;
 
+            // Fix 3: Null-pointer guard
             const char* msgType = doc["type"];
+            if (!msgType) return;
             
             if (strcmp(msgType, "cmd") == 0)
             {
                 const char* device = doc["device"];
-                bool value = doc["value"];
+                if (!device) return;
                 
-                if (!state.autoMode)
+                bool value = doc["value"] | false;
+                
+                portENTER_CRITICAL(&this->stateMux);
+                bool inAuto = state.autoMode;
+                portEXIT_CRITICAL(&this->stateMux);
+                
+                if (!inAuto)
                 {
-                    if (strcmp(device, "light") == 0)   value ? devices.lightOn() : devices.lightOff();
+                    portENTER_CRITICAL(&this->stateMux);
+                    if (strcmp(device, "light") == 0)       value ? devices.lightOn() : devices.lightOff();
                     else if (strcmp(device, "fan") == 0)    value ? devices.fanOn() : devices.fanOff();
                     else if (strcmp(device, "fogger") == 0) value ? devices.foggerOn() : devices.foggerOff();
                     else if (strcmp(device, "pump") == 0)   value ? devices.pumpOn() : devices.pumpOff();
+                    portEXIT_CRITICAL(&this->stateMux);
                 }
                 else
                 {
@@ -118,8 +134,11 @@ void WebUIManager::onWsEvent(AsyncWebSocketClient* client, AwsEventType type,
             }
             else if (strcmp(msgType, "mode") == 0)
             {
-                state.autoMode = doc["value"];
-                Serial.printf("[WebUI] Mode changed to: %s\n", state.autoMode ? "AUTO" : "MANUAL");
+                portENTER_CRITICAL(&this->stateMux);
+                state.autoMode = doc["value"] | false;
+                bool newMode = state.autoMode;
+                portEXIT_CRITICAL(&this->stateMux);
+                Serial.printf("[WebUI] Mode changed to: %s\n", newMode ? "AUTO" : "MANUAL");
                 broadcastState();
             }
         }
@@ -131,6 +150,8 @@ void WebUIManager::broadcastState()
     JsonDocument doc;
     doc["type"] = "state";
     JsonObject pl = doc["payload"].to<JsonObject>();
+    
+    portENTER_CRITICAL(&this->stateMux);
     pl["temperature"] = state.temperature;
     pl["humidity"] = state.humidity;
     pl["waterLevelPercent"] = state.waterLevelPercent;
@@ -141,6 +162,7 @@ void WebUIManager::broadcastState()
     pl["pump"] = state.pump;
     pl["autoMode"] = state.autoMode;
     pl["safeMode"] = state.safeMode;
+    portEXIT_CRITICAL(&this->stateMux);
 
     String payload;
     serializeJson(doc, payload);
@@ -150,7 +172,7 @@ void WebUIManager::broadcastState()
 void WebUIManager::handleApiControl(AsyncWebServerRequest* request, uint8_t* data, size_t len)
 {
     JsonDocument doc;
-    DeserializationError err = deserializeJson(doc, (const char*)data);
+    DeserializationError err = deserializeJson(doc, data, len);
     if (err)
     {
         request->send(400, "application/json", "{\"error\":\"invalid json\"}");
@@ -158,18 +180,35 @@ void WebUIManager::handleApiControl(AsyncWebServerRequest* request, uint8_t* dat
     }
     
     const char* device = doc["device"];
-    bool value = doc["value"];
-    
-    if (!state.autoMode)
+    if (!device)
     {
-        if (strcmp(device, "light") == 0)   value ? devices.lightOn() : devices.lightOff();
-        else if (strcmp(device, "fan") == 0)    value ? devices.fanOn() : devices.fanOff();
-        else if (strcmp(device, "fogger") == 0) value ? devices.foggerOn() : devices.foggerOff();
-        else if (strcmp(device, "pump") == 0)   value ? devices.pumpOn() : devices.pumpOff();
+        request->send(400, "application/json", "{\"ok\":false,\"error\":\"missing device\"}");
+        return;
+    }
+    
+    bool value = doc["value"] | false;
+    bool executed = false;
+    
+    portENTER_CRITICAL(&this->stateMux);
+    bool inAuto = state.autoMode;
+    portEXIT_CRITICAL(&this->stateMux);
+    
+    if (!inAuto)
+    {
+        portENTER_CRITICAL(&this->stateMux);
+        if (strcmp(device, "light") == 0)       { value ? devices.lightOn() : devices.lightOff(); executed = true; }
+        else if (strcmp(device, "fan") == 0)    { value ? devices.fanOn() : devices.fanOff(); executed = true; }
+        else if (strcmp(device, "fogger") == 0) { value ? devices.foggerOn() : devices.foggerOff(); executed = true; }
+        else if (strcmp(device, "pump") == 0)   { value ? devices.pumpOn() : devices.pumpOff(); executed = true; }
+        portEXIT_CRITICAL(&this->stateMux);
     }
     
     broadcastState();
-    request->send(200, "application/json", "{\"ok\":true}");
+    
+    if (executed)
+        request->send(200, "application/json", "{\"ok\":true}");
+    else
+        request->send(200, "application/json", "{\"ok\":false,\"reason\":\"auto_mode_or_unknown_device\"}");
 }
 
 void WebUIManager::update()

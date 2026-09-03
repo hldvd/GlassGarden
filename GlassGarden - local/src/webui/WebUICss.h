@@ -7,7 +7,7 @@ GlassGarden — Web UI CSS Template
 فایل CSS داشبورد Web UI
 به صورت جداگانه برای خوانایی بهتر کد
 
-Version : 1.0.0
+Version : 1.1.0
 ------------------------------------------------------------
 */
 
@@ -19,19 +19,19 @@ const char WEBUI_CSS[] PROGMEM = R"cssraw(
   header {
     background-color: #e6ded1;
     border-radius: 20px;
-    padding: 20px 40px;
+    padding: 20px 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     position: relative;
     overflow: hidden;
-    min-height: 100px;
+    min-height: 110px;
   }
 
   header::before {
     content: "";
     position: absolute;
-    left: -10px;
+    left: 30px;
     top: 50%;
     transform: translateY(-50%);
     width: 120px;
@@ -48,7 +48,7 @@ const char WEBUI_CSS[] PROGMEM = R"cssraw(
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    width: 180px;
+    width: 200px;
     height: 120px;
     background-image: var(--img-nature);
     background-size: contain;
@@ -59,15 +59,15 @@ const char WEBUI_CSS[] PROGMEM = R"cssraw(
   .status {
     position: relative;
     z-index: 1;
-    margin: 0 auto;
     display: flex;
     align-items: center;
     gap: 8px;
     background: rgba(255,255,255,0.3);
     padding: 8px 20px;
     border-radius: 20px;
-    font-size: .9rem;
-    color:#64748b
+    font-size: .7rem;
+    color:#64748b;
+    bottom:-30px;
   }
   
   .status-dot{width:10px;height:10px;border-radius:50%;background:#ef4444}
@@ -109,7 +109,9 @@ const char WEBUI_CSS[] PROGMEM = R"cssraw(
   @media(max-width:480px){
     header h1{font-size:1.2rem}
     .card-value{font-size:1.3rem}
-    header{padding:15px 20px}
-    header::before, header::after{width:80px;height:80px}
+    header::before, header::after{width:160px;height:80px}
+    header::before{left:-30px}
+    header::after{left:55%;}
+    .status{padding:8px 12px;right:-10px;}
   }
 )cssraw";

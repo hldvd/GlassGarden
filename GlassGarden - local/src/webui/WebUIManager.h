@@ -12,13 +12,16 @@ Version : 1.0.0
 ------------------------------------------------------------
 */
 
-// ============================================================
-// WebUIManager.h
-// ============================================================
-#ifndef WEB_UI_MANAGER_H
-#define WEB_UI_MANAGER_H
+/*
+------------------------------------------------------------
+GlassGarden — Web UI Manager
+
+Version : 1.1.0
+------------------------------------------------------------
+*/
 
 #include <Arduino.h>
+#include <WiFi.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
@@ -33,18 +36,14 @@ public:
 private:
     AsyncWebServer server{80};
     AsyncWebSocket ws{"/ws"};
+    portMUX_TYPE stateMux = portMUX_INITIALIZER_UNLOCKED;
 
     void setupRoutes();
     void onWsEvent(AsyncWebSocketClient* client, AwsEventType type,
                    void* arg, uint8_t* data, size_t len);
     void handleApiControl(AsyncWebServerRequest* request, uint8_t* data, size_t len);
 
-    // HTML با base64 تصاویر
     String getIndexedHtml();
-
-    static const char INDEX_HTML_TEMPLATE[] PROGMEM;
 };
 
 extern WebUIManager webUI;
-
-#endif

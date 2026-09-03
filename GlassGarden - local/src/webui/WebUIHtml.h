@@ -3,12 +3,7 @@
 /*
 ------------------------------------------------------------
 GlassGarden — Web UI HTML Template
-
-فایل HTML داشبورد Web UI (بدون CSS)
-CSS در فایل جداگانه WebUICss.h تعریف شده
-و در زمان اجرا جایگذاری می‌شود.
-
-Version : 1.0.0
+Version : 1.1.0
 ------------------------------------------------------------
 */
 
@@ -108,7 +103,8 @@ let lastState = {};
 function connect(){
   if (ws) return;
   
-  ws = new WebSocket('ws://'+location.host+'/ws');
+  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(protocol + '//' + location.host + '/ws');
   
   ws.onopen = ()=>{
     clearTimeout(reconnectTimer);
@@ -119,7 +115,13 @@ function connect(){
   };
   
   ws.onmessage = (e)=>{
-    const msg = JSON.parse(e.data);
+    let msg;
+    try {
+      msg = JSON.parse(e.data);
+    } catch(err) {
+      console.error('Invalid JSON:', e.data);
+      return;
+    }
     if(msg.type === 'state') updateUI(msg.payload);
   };
   
@@ -148,9 +150,14 @@ window.onbeforeunload = function(){
 
 function updateUI(s){
   lastState = s;
-  document.getElementById('valTemp').textContent = s.temperature.toFixed(1);
-  document.getElementById('valHum').textContent = s.humidity.toFixed(1);
-  document.getElementById('valWater').textContent = s.waterLevelPercent;
+  
+  const temp = (typeof s.temperature === 'number') ? s.temperature.toFixed(1) : '--';
+  const hum  = (typeof s.humidity === 'number') ? s.humidity.toFixed(1) : '--';
+  const water = (s.waterLevelPercent !== undefined) ? s.waterLevelPercent : '--';
+  
+  document.getElementById('valTemp').textContent = temp;
+  document.getElementById('valHum').textContent = hum;
+  document.getElementById('valWater').textContent = water;
   document.getElementById('valSafe').textContent = s.safeMode ? '⚠️ Safe Mode' : '✅ عادی';
   document.getElementById('valSafe').style.color = s.safeMode ? '#ef4444' : '#4ade80';
   
@@ -164,28 +171,46 @@ function updateUI(s){
 }
 
 function setSwitch(idSw,idSt,on){
-  document.getElementById(idSw).checked = on;
-  document.getElementById(idSt).textContent = on ? 'روشن' : 'خاموش';
-  document.getElementById(idSt).style.color = on ? '#4ade80' : '#94a3b8';
+  const sw = document.getElementById(idSw);
+  const st = document.getElementById(idSt);
+  if(sw) sw.checked = on;
+  if(st) {
+    st.textContent = on ? 'روشن' : 'خاموش';
+    st.style.color = on ? '#4ade80' : '#94a3b8';
+  }
 }
 
 function toggle(device, on){
   if(ws && ws.readyState===1){
     ws.send(JSON.stringify({type:'cmd', device:device, value:on}));
+  } else {
+    addLog('⚠️ اتصال برقرار نیست — دستور ارسال نشد');
+    const map = {light:'swLight', fan:'swFan', fogger:'swFogger', pump:'swPump'};
+    const sw = document.getElementById(map[device]);
+    if(sw) sw.checked = !on;
   }
 }
 
 function setMode(auto){
   if(ws && ws.readyState===1){
     ws.send(JSON.stringify({type:'mode', value:auto}));
+  } else {
+    addLog('⚠️ اتصال برقرار نیست — تغییر حالت امکان‌پذیر نیست');
   }
 }
 
 function addLog(text){
   const box = document.getElementById('logBox');
   const t = new Date().toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  box.insertAdjacentHTML('afterbegin', '<div class="log-entry"><span class="log-time">'+t+'</span> '+text+'</div>');
-  if(box.children.length>20) box.lastChild.remove();
+  const div = document.createElement('div');
+  div.className = 'log-entry';
+  const timeSpan = document.createElement('span');
+  timeSpan.className = 'log-time';
+  timeSpan.textContent = t;
+  div.appendChild(timeSpan);
+  div.appendChild(document.createTextNode(' ' + text));
+  box.insertBefore(div, box.firstChild);
+  if(box.children.length > 20) box.lastChild.remove();
 }
 
 connect();
